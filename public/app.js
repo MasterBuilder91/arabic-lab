@@ -1,18 +1,3 @@
-const DIACRITICS = [
-  { ch: "َ", label: "َ" }, // fatha
-  { ch: "ِ", label: "ِ" }, // kasra
-  { ch: "ُ", label: "ُ" }, // damma
-  { ch: "ْ", label: "ْ" }, // sukun
-  { ch: "ّ", label: "ّ" }, // shadda
-  { ch: "ً", label: "ً" }, // fathatan
-  { ch: "ٍ", label: "ٍ" }, // kasratan
-  { ch: "ٌ", label: "ٌ" }, // dammatan
-  { ch: "آ", label: "آ" },
-  { ch: "أ", label: "أ" },
-  { ch: "إ", label: "إ" },
-  { ch: "ة", label: "ة" },
-];
-
 const ARABIC_RE = /[؀-ۿ]/;
 
 function getClientUid() {
@@ -30,6 +15,7 @@ const state = {
   variants: ["produce_form", "identify_pattern", "identify_root"],
   current: null,
   startedAt: 0,
+  answered: false,
 };
 
 const els = {
@@ -37,9 +23,7 @@ const els = {
   variantLabel: document.getElementById("variantLabel"),
   masteryLabel: document.getElementById("masteryLabel"),
   promptBlock: document.getElementById("promptBlock"),
-  answerInput: document.getElementById("answerInput"),
-  diacriticBar: document.getElementById("diacriticBar"),
-  submitBtn: document.getElementById("submitBtn"),
+  optionsGrid: document.getElementById("optionsGrid"),
   nextBtn: document.getElementById("nextBtn"),
   feedback: document.getElementById("feedback"),
 };
@@ -54,26 +38,6 @@ function renderPrompt(promptText) {
   });
 }
 
-function insertAtCursor(input, text) {
-  const start = input.selectionStart ?? input.value.length;
-  const end = input.selectionEnd ?? input.value.length;
-  input.value = input.value.slice(0, start) + text + input.value.slice(end);
-  const pos = start + text.length;
-  input.setSelectionRange(pos, pos);
-  input.focus();
-}
-
-function buildDiacriticBar() {
-  els.diacriticBar.innerHTML = "";
-  DIACRITICS.forEach((d) => {
-    const btn = document.createElement("button");
-    btn.type = "button";
-    btn.textContent = d.label;
-    btn.addEventListener("click", () => insertAtCursor(els.answerInput, d.ch));
-    els.diacriticBar.appendChild(btn);
-  });
-}
-
 async function loadStageLabel() {
   const res = await fetch("/api/stages");
   const stages = await res.json();
@@ -81,13 +45,26 @@ async function loadStageLabel() {
   if (stage) els.stageLabel.textContent = `Stage ${stage.stage_number}: ${stage.name}`;
 }
 
+function renderOptions(options) {
+  els.optionsGrid.innerHTML = "";
+  options.forEach((optionText) => {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "option-btn";
+    if (ARABIC_RE.test(optionText)) btn.classList.add("arabic");
+    btn.textContent = optionText;
+    btn.addEventListener("click", () => chooseOption(optionText, btn));
+    els.optionsGrid.appendChild(btn);
+  });
+}
+
 async function loadNextDrill() {
-  els.submitBtn.disabled = false;
+  state.answered = false;
   els.nextBtn.disabled = true;
-  els.answerInput.value = "";
-  els.answerInput.disabled = false;
   els.feedback.textContent = "";
   els.feedback.className = "feedback";
+  els.optionsGrid.innerHTML = "";
+  renderPrompt("Loading…");
 
   const variant = state.variants[Math.floor(Math.random() * state.variants.length)];
   const res = await fetch(`/api/drill/next?stageId=${state.stageId}&variant=${variant}`);
@@ -101,12 +78,13 @@ async function loadNextDrill() {
 
   els.variantLabel.textContent = variant.replace(/_/g, " ");
   renderPrompt(item.prompt);
-  els.answerInput.focus();
+  renderOptions(item.options);
 }
 
-async function submitAnswer() {
-  if (!state.current) return;
-  const userAnswer = els.answerInput.value;
+async function chooseOption(selected, selectedBtn) {
+  if (state.answered || !state.current) return;
+  state.answered = true;
+
   const responseMs = Math.round(performance.now() - state.startedAt);
 
   const res = await fetch("/api/drill/submit", {
@@ -120,35 +98,41 @@ async function submitAnswer() {
       patternId: state.current.pattern_id,
       prompt: state.current.prompt,
       correctAnswer: state.current.correct_answer,
-      userAnswer,
+      userAnswer: selected,
       responseMs,
     }),
   });
   const result = await res.json();
 
-  els.submitBtn.disabled = true;
+  // Lock the grid, mark correct/incorrect on the buttons themselves —
+  // no separate "check" step, the tap IS the answer.
+  [...els.optionsGrid.children].forEach((btn) => {
+    btn.disabled = true;
+    if (btn.textContent === result.correct_answer) {
+      btn.classList.add("correct");
+    } else if (btn === selectedBtn) {
+      btn.classList.add("incorrect");
+    } else {
+      btn.classList.add("dim");
+    }
+  });
+
   els.nextBtn.disabled = false;
-  els.answerInput.disabled = true;
 
   if (result.is_correct) {
     els.feedback.textContent = "Correct.";
     els.feedback.className = "feedback correct";
   } else {
-    els.feedback.textContent = `Not quite. Correct answer: ${result.correct_answer}`;
+    els.feedback.textContent = "Not quite — correct answer is highlighted.";
     els.feedback.className = "feedback incorrect";
   }
   els.masteryLabel.textContent = `Mastery: ${Math.round(result.mastery * 100)}%`;
 }
 
-els.submitBtn.addEventListener("click", submitAnswer);
 els.nextBtn.addEventListener("click", loadNextDrill);
-els.answerInput.addEventListener("keydown", (e) => {
-  if (e.key === "Enter") {
-    if (!els.submitBtn.disabled) submitAnswer();
-    else if (!els.nextBtn.disabled) loadNextDrill();
-  }
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Enter" && !els.nextBtn.disabled) loadNextDrill();
 });
 
-buildDiacriticBar();
 loadStageLabel();
 loadNextDrill();

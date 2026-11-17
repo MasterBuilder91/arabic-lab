@@ -58,16 +58,66 @@ export type DrillVariant =
   | "identify_pattern" // given a derived word -> name the wazn
   | "identify_root";   // given a derived word -> extract the root
 
+const HARAKAT = ["َ", "ِ", "ُ"] as const; // fatha, kasra, damma
+
+/**
+ * A believable WRONG answer, not a random one: take the correct surface
+ * form and flip exactly one vowel to a different one. Same consonant
+ * skeleton, wrong harakah — which is exactly the mistake this drill
+ * exists to catch, since i'raab/sarf precision lives in the vowels, not
+ * the letters.
+ */
+export function perturbDiacritics(surfaceForm: string): string | null {
+  const chars = [...surfaceForm];
+  const idx = chars.findIndex((c) => (HARAKAT as readonly string[]).includes(c));
+  if (idx === -1) return null;
+  const current = chars[idx];
+  const alternatives = HARAKAT.filter((h) => h !== current);
+  chars[idx] = alternatives[Math.floor(Math.random() * alternatives.length)];
+  return chars.join("");
+}
+
+function shuffle<T>(items: T[]): T[] {
+  const arr = [...items];
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
+/** Correct answer + up to (max-1) distinct distractors, shuffled. */
+export function buildMultipleChoiceOptions(
+  correct: string,
+  candidates: string[],
+  max = 4
+): string[] {
+  const opts = [correct];
+  for (const c of candidates) {
+    if (opts.length >= max) break;
+    if (!opts.includes(c)) opts.push(c);
+  }
+  return shuffle(opts);
+}
+
 /**
  * Build one drill item. Checks for a stored override first (handles
  * irregular/weak/hollow/doubled roots and anything hand-vetted), falls
  * back to live algorithmic generation for regular sound roots.
+ *
+ * distractorCandidates are wrong-but-plausible answers for THIS variant
+ * (fetched/derived by the caller, which has DB access) — e.g. the same
+ * root in a different pattern, a different root in the same pattern, or
+ * a one-vowel perturbation of the correct form. Tap-to-select beats
+ * typing full tashkīl for high-volume drilling, so the frontend never
+ * asks the student to type an Arabic answer by hand.
  */
 export function buildDrillItem(
   root: Root,
   pattern: Pattern,
   variant: DrillVariant,
-  override?: DerivedWord | null
+  override: DerivedWord | null | undefined,
+  distractorCandidates: string[]
 ): DrillItem {
   const rootLetters = splitRootLetters(root.letters);
   const surfaceForm =
@@ -79,7 +129,7 @@ export function buildDrillItem(
 
   switch (variant) {
     case "produce_form":
-      prompt = `Root: ${root.letters_display}  (${root.gloss_en})\nPattern: ${pattern.wazn_label}\n\nProduce the derived word.`;
+      prompt = `Root: ${root.letters_display}  (${root.gloss_en})\nPattern: ${pattern.wazn_label}\n\nWhich is the correctly derived word?`;
       correct_answer = surfaceForm;
       break;
     case "identify_pattern":
@@ -103,6 +153,7 @@ export function buildDrillItem(
     pattern_description: pattern.description_en,
     prompt,
     correct_answer,
+    options: buildMultipleChoiceOptions(correct_answer, distractorCandidates),
     generated,
   };
 }

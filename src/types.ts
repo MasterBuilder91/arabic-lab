@@ -60,6 +60,7 @@ export interface DrillItem {
   pattern_description: string | null;
   prompt: string;       // what's shown to the student
   correct_answer: string;
+  options: string[];    // tappable choices, shuffled, correct_answer always included
   generated: boolean;   // true if algorithmically derived (no stored override), false if looked up
 }
 

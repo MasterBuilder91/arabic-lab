@@ -44,6 +44,35 @@ export async function getRandomPatternForStage(env: Env, stageId: number): Promi
     .first<Pattern>();
 }
 
+/** Other patterns in the same stage (for "wrong pattern" distractors). */
+export async function getOtherPatternsForStage(
+  env: Env,
+  stageId: number,
+  excludePatternId: number,
+  limit = 3
+): Promise<Pattern[]> {
+  const { results } = await env.DB.prepare(
+    "SELECT * FROM patterns WHERE stage_id = ? AND id != ? ORDER BY RANDOM() LIMIT ?"
+  )
+    .bind(stageId, excludePatternId, limit)
+    .all<Pattern>();
+  return results;
+}
+
+/** Other random roots (for "wrong root" distractors). */
+export async function getRandomRootsExcluding(
+  env: Env,
+  excludeRootId: number,
+  limit = 3
+): Promise<Root[]> {
+  const { results } = await env.DB.prepare(
+    "SELECT * FROM roots WHERE id != ? ORDER BY RANDOM() LIMIT ?"
+  )
+    .bind(excludeRootId, limit)
+    .all<Root>();
+  return results;
+}
+
 export async function getOverride(
   env: Env,
   rootId: number,
