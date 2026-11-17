@@ -1,4 +1,4 @@
-import type { DerivedWord, DrillItem, Pattern, Root } from "./types";
+import type { DerivedWord, DrillItem, DrillOption, OptionKind, Pattern, Root } from "./types";
 
 /**
  * THE MECHANISM (this is the whole point of "generative" drilling):
@@ -86,16 +86,57 @@ function shuffle<T>(items: T[]): T[] {
   return arr;
 }
 
-/** Correct answer + up to (max-1) distinct distractors, shuffled. */
+export interface Distractor {
+  text: string;
+  kind: OptionKind;
+}
+
+/**
+ * Every wrong tap should teach something, not just fail silently —
+ * this is the "make it plain" method applied to feedback: name the
+ * actual mechanism, not "incorrect."
+ */
+function explainOption(kind: OptionKind, variant: DrillVariant): string {
+  if (kind === "correct") {
+    switch (variant) {
+      case "produce_form":
+        return "Right — the root poured cleanly into the pattern.";
+      case "identify_pattern":
+        return "Right — that's the pattern (wazn) that produced this word.";
+      case "identify_root":
+        return "Right — those are the root letters.";
+    }
+  }
+  switch (kind) {
+    case "wrong_pattern":
+      return "Right root, wrong pattern — this is the SAME root poured into a different template.";
+    case "wrong_root":
+      return "Right pattern, wrong root — this is a different root poured into the SAME template.";
+    case "wrong_vowel":
+      return "Same consonant skeleton, one vowel changed. The letters were right, the harakah wasn't — that's the actual mistake this drill is built to catch.";
+    default:
+      return variant === "identify_pattern"
+        ? "A real pattern in this stage — just not the one that produced this word."
+        : "A real root in the set — just not the one that produced this word.";
+  }
+}
+
+/** Correct answer + up to (max-1) distinct distractors, shuffled, each with an explanation. */
 export function buildMultipleChoiceOptions(
   correct: string,
-  candidates: string[],
+  distractors: Distractor[],
+  variant: DrillVariant,
   max = 4
-): string[] {
-  const opts = [correct];
-  for (const c of candidates) {
+): DrillOption[] {
+  const seen = new Set([correct]);
+  const opts: DrillOption[] = [
+    { text: correct, kind: "correct", explanation: explainOption("correct", variant) },
+  ];
+  for (const d of distractors) {
     if (opts.length >= max) break;
-    if (!opts.includes(c)) opts.push(c);
+    if (seen.has(d.text)) continue;
+    seen.add(d.text);
+    opts.push({ text: d.text, kind: d.kind, explanation: explainOption(d.kind, variant) });
   }
   return shuffle(opts);
 }
@@ -117,7 +158,7 @@ export function buildDrillItem(
   pattern: Pattern,
   variant: DrillVariant,
   override: DerivedWord | null | undefined,
-  distractorCandidates: string[]
+  distractorCandidates: Distractor[]
 ): DrillItem {
   const rootLetters = splitRootLetters(root.letters);
   const surfaceForm =
@@ -153,7 +194,7 @@ export function buildDrillItem(
     pattern_description: pattern.description_en,
     prompt,
     correct_answer,
-    options: buildMultipleChoiceOptions(correct_answer, distractorCandidates),
+    options: buildMultipleChoiceOptions(correct_answer, distractorCandidates, variant),
     generated,
   };
 }

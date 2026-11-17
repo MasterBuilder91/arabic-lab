@@ -34,9 +34,35 @@ body {
   letter-spacing: 0.02em;
 }
 
+.topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
 .stage-label {
   color: var(--muted);
   font-size: 0.9rem;
+}
+
+.btn.small {
+  padding: 0.3rem 0.7rem;
+  font-size: 0.85rem;
+}
+
+.hidden { display: none; }
+
+.lesson-card { max-width: 560px; line-height: 1.7; }
+
+.lesson-body p { margin: 0 0 1rem; }
+
+.lesson-body ul { margin: 0 0 1.25rem; padding-left: 1.2rem; }
+.lesson-body li { margin-bottom: 0.5rem; }
+
+.lesson-body .arabic-line {
+  direction: rtl;
+  font-size: 1.3rem;
+  display: inline-block;
 }
 
 .app {
@@ -165,3 +191,23 @@ body {
 
 .feedback.correct { color: var(--good); }
 .feedback.incorrect { color: var(--bad); }
+
+.explain-block {
+  margin-top: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.explain-line {
+  font-size: 0.9rem;
+  line-height: 1.5;
+  padding: 0.5rem 0.7rem;
+  border-radius: 6px;
+  border-left: 3px solid var(--panel-border);
+}
+
+.explain-line .label { font-weight: 600; margin-right: 0.3rem; }
+
+.explain-line.correct { border-left-color: var(--good); background: rgba(47, 143, 111, 0.1); }
+.explain-line.incorrect { border-left-color: var(--bad); background: rgba(192, 73, 63, 0.1); }

@@ -9,11 +9,21 @@
 <body>
   <header class="topbar">
     <h1>Arabic Lab</h1>
-    <div id="stageLabel" class="stage-label"></div>
+    <div class="topbar-right">
+      <div id="stageLabel" class="stage-label"></div>
+      <button id="lessonToggleBtn" class="btn small">Lesson</button>
+    </div>
   </header>
 
   <main id="app" class="app">
-    <section id="drillCard" class="card">
+    <section id="lessonCard" class="card lesson-card">
+      <div id="lessonBody" class="lesson-body"></div>
+      <div class="action-row">
+        <button id="startDrillingBtn" class="btn primary">Start drilling</button>
+      </div>
+    </section>
+
+    <section id="drillCard" class="card hidden">
       <div class="meta-row">
         <span id="variantLabel" class="badge"></span>
         <span id="masteryLabel" class="mastery"></span>

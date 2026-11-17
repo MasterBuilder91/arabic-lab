@@ -1,4 +1,4 @@
-import type { DrillVariant } from "./drillEngine";
+import type { Distractor, DrillVariant } from "./drillEngine";
 import { buildDrillItem, checkAnswer, deriveSurfaceForm, perturbDiacritics, splitRootLetters } from "./drillEngine";
 import {
   getDrillTypeByKey,
@@ -45,7 +45,8 @@ export default {
 
       // Build distractors appropriate to the variant — the whole point
       // is that the student taps a choice, never types an Arabic answer.
-      let distractorCandidates: string[] = [];
+      // Each one is tagged with WHY it's wrong, so a wrong tap teaches.
+      let distractorCandidates: Distractor[] = [];
 
       if (variant === "produce_form") {
         const rootLetters = splitRootLetters(root.letters);
@@ -58,20 +59,26 @@ export default {
 
         if (otherPatterns[0]) {
           // right root, wrong pattern
-          distractorCandidates.push(deriveSurfaceForm(rootLetters, otherPatterns[0].template));
+          distractorCandidates.push({
+            text: deriveSurfaceForm(rootLetters, otherPatterns[0].template),
+            kind: "wrong_pattern",
+          });
         }
         if (otherRoots[0]) {
           // wrong root, right pattern
-          distractorCandidates.push(deriveSurfaceForm(splitRootLetters(otherRoots[0].letters), pattern.template));
+          distractorCandidates.push({
+            text: deriveSurfaceForm(splitRootLetters(otherRoots[0].letters), pattern.template),
+            kind: "wrong_root",
+          });
         }
         const perturbed = perturbDiacritics(correctForm);
-        if (perturbed) distractorCandidates.push(perturbed); // right skeleton, wrong vowel
+        if (perturbed) distractorCandidates.push({ text: perturbed, kind: "wrong_vowel" });
       } else if (variant === "identify_pattern") {
         const otherPatterns = await getOtherPatternsForStage(env, stageId, pattern.id, 3);
-        distractorCandidates = otherPatterns.map((p) => p.wazn_label);
+        distractorCandidates = otherPatterns.map((p) => ({ text: p.wazn_label, kind: "distractor" as const }));
       } else if (variant === "identify_root") {
         const otherRoots = await getRandomRootsExcluding(env, root.id, 3);
-        distractorCandidates = otherRoots.map((r) => r.letters_display);
+        distractorCandidates = otherRoots.map((r) => ({ text: r.letters_display, kind: "distractor" as const }));
       }
 
       const item = buildDrillItem(root, pattern, variant, override, distractorCandidates);
