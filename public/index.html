@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Arabic Lab</title>
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <header class="topbar">
+    <h1>Arabic Lab</h1>
+    <div id="stageLabel" class="stage-label"></div>
+  </header>
+
+  <main id="app" class="app">
+    <section id="drillCard" class="card">
+      <div class="meta-row">
+        <span id="variantLabel" class="badge"></span>
+        <span id="masteryLabel" class="mastery"></span>
+      </div>
+
+      <div id="promptBlock" class="prompt-block">
+        <p class="loading">Loading drill…</p>
+      </div>
+
+      <div class="answer-row">
+        <input
+          id="answerInput"
+          class="arabic-input"
+          type="text"
+          dir="rtl"
+          lang="ar"
+          autocomplete="off"
+          autocapitalize="off"
+          spellcheck="false"
+          placeholder="اكتب الإجابة هنا"
+        />
+      </div>
+
+      <div id="diacriticBar" class="diacritic-bar"></div>
+
+      <div class="action-row">
+        <button id="submitBtn" class="btn primary">Check</button>
+        <button id="nextBtn" class="btn" disabled>Next</button>
+      </div>
+
+      <div id="feedback" class="feedback" aria-live="polite"></div>
+    </section>
+  </main>
+
+  <script src="/app.js"></script>
+</body>
+</html>

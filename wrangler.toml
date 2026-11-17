@@ -1,0 +1,13 @@
+name = "arabic-lab"
+main = "src/index.ts"
+compatibility_date = "2026-11-16"
+compatibility_flags = ["nodejs_compat"]
+
+[[d1_databases]]
+binding = "DB"
+database_name = "arabic-lab-db"
+database_id = "e45a87da-eff9-4197-8f89-5ee6f613f2a9"
+
+[assets]
+directory = "./public"
+binding = "ASSETS"
